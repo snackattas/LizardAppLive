@@ -1,11 +1,13 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+import os
 
 app = Flask(__name__)
+app.secret_key = os.environ['SECRET_KEY']
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///LizardCatalog.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///LizardCatalog.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://lizard_app_user:password@localhost/lizard_app'
 app.config[' SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 # Initialize third party modules
 db = SQLAlchemy(app)
 

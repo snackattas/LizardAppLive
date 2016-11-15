@@ -97,30 +97,34 @@ def isURLImage(url):
     if query:
         path = path + "?" + query
 
+    try:
     # make a http HEAD request
-    h = httplib.HTTP(host)
-    h.putrequest("HEAD", path)
-    h.putheader("Host", host)
-    h.endheaders()
+        h = httplib.HTTP(host)
+        h.putrequest("HEAD", path)
+        h.putheader("Host", host)
+        h.endheaders()
 
-    status, reason, headers = h.getreply()
-    # Convert byte size to megabytes
-    image_type = headers.get("content-type")
-    if image_type not in acceptable_image_types:
-        error = "Only image URLs accepted: %s" % (url)
+        status, reason, headers = h.getreply()
+        # Convert byte size to megabytes
+        image_type = headers.get("content-type")
+        if image_type not in acceptable_image_types:
+            error = "Only image URLs accepted: %s" % (url)
+            h.close()
+            return ("", error)
+        size = headers.get("content-length")
+        if not size:
+            error = "Can't determine size of image from HTTP request: %s" % (url)
+            h.close()
+            return ("", error)
+        size = float(size) / 1000000.0
+        if size > 3.0:
+            error = "Only supports images that are less than 3 MB: %s" % (url)
+            h.close()
+            return ("", error)
         h.close()
+    except:
+        error = "Invalid url: %s" % (url)
         return ("", error)
-    size = headers.get("content-length")
-    if not size:
-        error = "Can't determine size of image from HTTP request: %s" % (url)
-        h.close()
-        return ("", error)
-    size = float(size) / 1000000.0
-    if size > 3.0:
-        error = "Only supports images that are less than 3 MB: %s" % (url)
-        h.close()
-        return ("", error)
-    h.close()
     return (url, "")
 
 # Function to make date difference human readable, for the Recent Activity
@@ -240,17 +244,19 @@ def newLizard():
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        return render_template("newLizard.html",
-                               login_session=login_session,
-                               error=error)
+        with store_context(store):
+            return render_template("newLizard.html",
+                                   login_session=login_session,
+                                   error=error)
     # urlopen uses a GET request and does not accept HTTPS urls
     try:
         url_open = urlopen(url)
     except:
-        error = "Unable to make a request to this URL: %s" % (url)
-        return render_template("newLizard.html",
-                               login_session=login_session,
-                               error=error)
+        with store_context(store):
+            error = "Unable to make a request to this URL: %s" % (url)
+            return render_template("newLizard.html",
+                                   login_session=login_session,
+                                   error=error)
     # Create Lizard object
     new_lizard = Lizard(
         name=request.form.get("name"),
@@ -300,18 +306,20 @@ def editLizard(lizard_id):
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        return render_template("editLizard.html",
-                               login_session=login_session,
-                               lizard=edited_lizard,
-                               error=error)
+        with store_context(store):
+            return render_template("editLizard.html",
+                                   login_session=login_session,
+                                   lizard=edited_lizard,
+                                   error=error)
     try:
         url_open = urlopen(url)
     except:
-        error = "Unable to make a request to this URL: %s" % (url)
-        return render_template("editLizard.html",
-                               login_session=login_session,
-                               lizard=edited_lizard,
-                               error=error)
+        with store_context(store):
+            error = "Unable to make a request to this URL: %s" % (url)
+            return render_template("editLizard.html",
+                                   login_session=login_session,
+                                   lizard=edited_lizard,
+                                   error=error)
 
     change_log = ChangeLog(
         user_id=edited_lizard.user_id,
@@ -357,7 +365,10 @@ def deleteLizard(lizard_id):
 
     session.add(change_log)
 
-    Hobby.query.filter_by(lizard_id=lizard_to_delete.id).delete()
+    # hobbies = Hobby.query.filter_by(lizard_id=lizard_to_delete.id)
+    # for hobby in hobbies:
+    #     HobbyImage.query.filter_by(hobby_id=hobby.id).delete()
+    #     session.delete(hobby)
     session.delete(lizard_to_delete)
     flash("Lizard %s Successfully Deleted" % lizard_to_delete.name)
     with store_context(store):
@@ -403,18 +414,20 @@ def newHobby(lizard_id):
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        return render_template("newHobby.html",
-                               login_session=login_session,
-                               lizard=lizard,
-                               error=error)
+        with store_context(store):
+            return render_template("newHobby.html",
+                                   login_session=login_session,
+                                   lizard=lizard,
+                                   error=error)
     try:
         url_open = urlopen(url)
     except:
-        error = "Unable to make a request to this URL: %s" % (url)
-        return render_template("newHobby.html",
-                               login_session=login_session,
-                               lizard=lizard,
-                               error=error)
+        with store_context(store):
+            error = "Unable to make a request to this URL: %s" % (url)
+            return render_template("newHobby.html",
+                                   login_session=login_session,
+                                   lizard=lizard,
+                                   error=error)
 
     new_hobby = Hobby(
         name=request.form.get("name"),
@@ -474,22 +487,26 @@ def editHobby(lizard_id, hobby_id):
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        return render_template("editHobby.html",
-                               login_session=login_session,
-                               lizard_id=lizard_id,
-                               hobby_id=hobby_id,
-                               hobby=edited_hobby,
-                               error=error)
+        with store_context(store):
+            return render_template("editHobby.html",
+                                   login_session=login_session,
+                                   lizard=lizard,
+                                   lizard_id=lizard_id,
+                                   hobby_id=hobby_id,
+                                   hobby=edited_hobby,
+                                   error=error)
     try:
         url_open = urlopen(url)
     except:
-        error = "Unable to make a request to this URL: %s" % (url)
-        return render_template("editHobby.html",
-                               login_session=login_session,
-                               lizard_id=lizard_id,
-                               hobby_id=hobby_id,
-                               hobby=edited_hobby,
-                               error=error)
+        with store_context(store):
+            error = "Unable to make a request to this URL: %s" % (url)
+            return render_template("editHobby.html",
+                                   login_session=login_session,
+                                   lizard=lizard,
+                                   lizard_id=lizard_id,
+                                   hobby_id=hobby_id,
+                                   hobby=edited_hobby,
+                                   error=error)
 
     # The ChangeLog for editing hobbies will have an entry if any change is
     # made to an hobby
@@ -553,9 +570,9 @@ def deleteHobby(lizard_id, hobby_id):
     return redirect(url_for("showHobby", lizard_id=lizard_id))
 
 
-@app.route("/error/")
-@app.errorhandler(304)
-@app.errorhandler(404)
-@app.errorhandler(500)
-def pageNotFound(error):
-    return render_template("pageNotFound.html", error=error), 404
+# @app.route("/error/")
+# @app.errorhandler(304)
+# @app.errorhandler(404)
+# @app.errorhandler(500)
+# def pageNotFound(error):
+#     return render_template("pageNotFound.html", error=error), 404

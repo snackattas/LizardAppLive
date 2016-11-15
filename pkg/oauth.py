@@ -11,6 +11,7 @@ import json
 import requests
 import random
 import string
+import os
 
 
 # Adds user to User table.
@@ -25,23 +26,23 @@ def createUser(login_session):
     if user_id:
         user = User.query.filter_by(id=user_id).one()
         if login_session.get('facebook_id'):
-            user.facebook_id = login_session['facebook_id']
+            user.facebook_id = login_session['facebook_id'].encode('utf-8')
         if login_session.get('gplus_id'):
-            user.gplus_id = login_session['gplus_id']
+            user.gplus_id = login_session['gplus_id'].encode('utf-8')
         session.add(user)
         session.commit()
         return user_id
     # At this point the user doesn't have an account, so we create a new
     # account for the user
     new_user = User(
-        name=login_session['username'],
-        email=login_session['email'],
-        picture=login_session['picture'])
+        name=login_session['username'].encode('utf-8'),
+        email=login_session['email'].encode('utf-8'),
+        picture=login_session['picture'].encode('utf-8'))
 
     if login_session.get('facebook_id'):
-        new_user.facebook_id = login_session['facebook_id']
+        new_user.facebook_id = login_session['facebook_id'].encode('utf-8')
     if login_session.get('gplus_id'):
-        new_user.gplus_id = login_session['gplus_id']
+        new_user.gplus_id = login_session['gplus_id'].encode('utf-8')
 
     session.add(new_user)
     session.commit()
@@ -94,12 +95,15 @@ def fbconnect():
         response = make_response(json.dumps('Invalid CSRF token.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    login.warning('in fbconnect')
     access_token = request.data
-    app_id = json.loads(open('pkg/clientSecrets/fbClientSecrets.json', 'r').
+
+    module_dir = os.path.dirname(__file__)# get current directory
+    fb_client_secrets_file = os.path.join(module_dir,
+        'clientSecrets/fbClientSecrets.json')
+    app_id = json.loads(open(fb_client_secrets_file, 'r').
                         read())['web']['app_id']
     app_secret = json.loads(
-        open('pkg/clientSecrets/fbClientSecrets.json', 'r').
+        open(fb_client_secrets_file, 'r').
         read())['web']['app_secret']
     url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_'\
         'exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' %\
@@ -159,8 +163,11 @@ def gconnect():
     code = request.data
     try:
         # Upgrade the authorization code into a credentials object
+        module_dir = os.path.dirname(__file__)# get current directory
+        google_client_secrets_file = os.path.join(module_dir,
+            'clientSecrets/googleClientSecrets.json')
         oauth_flow = flow_from_clientsecrets(
-            'pkg/clientSecrets/googleClientSecrets.json', scope='')
+            google_client_secrets_file, scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:
@@ -188,8 +195,11 @@ def gconnect():
         return response
 
     # Verify that the access token is valid for this app.
+    module_dir = os.path.dirname(__file__)# get current directory
+    google_client_secrets_file = os.path.join(module_dir,
+        'clientSecrets/googleClientSecrets.json')
     CLIENT_ID = json.loads(
-        open('pkg/clientSecrets/googleClientSecrets.json', 'r').
+        open(google_client_secrets_file, 'r').
         read())['web']['client_id']
     if result['issued_to'] != CLIENT_ID:
         response = make_response(
