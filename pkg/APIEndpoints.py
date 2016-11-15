@@ -4,6 +4,7 @@ from flask import request, jsonify
 from werkzeug.contrib.atom import AtomFeed
 import datetime
 
+base = "http://lizardapp.herokuapp.com"
 
 # JSON API Endpoints
 @app.route('/lizard/<int:lizard_id>/hobby/JSON/')
@@ -45,13 +46,13 @@ def lizardATOM():
         feed_url=request.url,
         url=request.url_root,
         author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
-        id="http://localhost:8000/publicLizard/",
+        id="%s/publicLizard/" % (base),
         updated=updated)
 
     lizards = Lizard.query.order_by(db.desc('creation_instant')).all()
     for lizard in lizards:
         user = User.query.filter_by(id=lizard.user_id).one()
-        url = "http://localhost:8000/publicLizard/#%s" % (lizard.id)
+        url = "%s/publicLizard/#%s" % (base, lizard.id)
         content = "Picture URL: <a href='%s'>%s</a>" % \
             (lizard.picture_url, lizard.picture_url)
         feed.add(
@@ -80,7 +81,7 @@ def hobbyATOM():
         feed_url=request.url,
         url=request.url_root,
         author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
-        id="http://localhost:8000/publicLizard/",
+        id="%s/publicLizard/" % (base),
         updated=updated)
 
     hobbies = Hobby.query.order_by(db.desc('creation_instant')).all()
@@ -91,13 +92,13 @@ def hobbyATOM():
             Description: %s
             </br>
             Lizard:
-            <a href='http://localhost:8000/publicLizard/#%s'>%s</a>
+            <a href='%s/publicLizard/#%s'>%s</a>
             </br>
             Picture URL: <a href='%s'>%s</a>""" % \
-            (hobby.description, lizard.id, lizard.name,
+            (base, hobby.description, lizard.id, lizard.name,
                 hobby.picture_url, hobby.picture_url)
-        url = "http://localhost:8000/publicLizard/%s/publicHobby/#%s" % \
-            (lizard.id, hobby.id)
+        url = "%s/publicLizard/%s/publicHobby/#%s" % \
+            (base, lizard.id, hobby.id)
         feed.add(
             hobby.name,
             content,
@@ -151,7 +152,7 @@ def allATOM():
         feed_url=request.url,
         url=request.url_root,
         author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
-        id="http://localhost:8000/publicLizard/",
+        id="%s/publicLizard/" % (base),
         updated=updated)
 
     for result in results:
@@ -161,23 +162,23 @@ def allATOM():
 
         if result.type == 'lizard':
             name = "Lizard %s" % (result.name)
-            url = "http://localhost:8000/publicLizard/#%s" % (result.id)
+            url = "%s/publicLizard/#%s" % (base, result.id)
             content = "Picture URL: <a href='%s'>%s</a>" % \
                 (result.picture_url, result.picture_url)
 
         if result.type == 'hobby':
             lizard = Lizard.query.filter_by(id=result.lizard_id).one()
             name = "Hobby %s" % (result.name)
-            url = "http://localhost:8000/publicLizard/%s/publicHobby/#%s" % \
-                (lizard.id, result.id)
+            url = "%s/publicLizard/%s/publicHobby/#%s" % \
+                (base, lizard.id, result.id)
             content = """
                 Description: %s
                 </br>
                 Lizard:
-                <a href='http://localhost:8000/publicLizard/#%s'>%s</a>
+                <a href='%s/publicLizard/#%s'>%s</a>
                 </br>
                 Picture URL: <a href='%s'>%s</a>""" % \
-                (result.description, result.id, lizard.name,
+                (result.description, base, result.id, lizard.name,
                     result.picture_url, result.picture_url)
 
         feed.add(
@@ -205,7 +206,7 @@ def changesATOM():
         feed_url=request.url,
         url=request.url_root,
         author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
-        id="http://localhost:8000/publicLizard/",
+        id="%s/publicLizard/" % (base),
         updated=updated)
 
     for change in changes:
@@ -216,20 +217,19 @@ def changesATOM():
             name = "Lizard %s" % (change.lizard_name)
             if change.action == 'delete':
                 url = None
-                unique_url = "http://localhost:8000/publicLizard/"
+                unique_url = "%s/publicLizard/" % (base)
             if change.action == 'new' or change.action == 'update':
-                url = "http://localhost:8000/publicLizard/#%s" % \
-                    (change.lizard_id)
+                url = "%s/publicLizard/#%s" % (base, change.lizard_id)
                 unique_url = url
 
         if change.table == 'hobby':
             name = "Hobby %s" % (change.hobby_name)
             if change.action == 'delete':
                 url = None
-                unique_url = "http://localhost:8000/publicLizard/"
+                unique_url = "%s/publicLizard/" % (base)
             if change.action == 'new' or change.action == 'update':
-                url = "http://localhost:8000/publicLizard/%s/publicHobby/#%s" \
-                    % (change.lizard_id, change.hobby_id)
+                url = "%s/publicLizard/%s/publicHobby/#%s" \
+                    % (base, change.lizard_id, change.hobby_id)
                 unique_url = url
 
         feed.add(
