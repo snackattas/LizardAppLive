@@ -1,6 +1,7 @@
 # Lizard Catalog App
 This is a Lizard Catalog app created as project 3 of [Udacity's Full Stack Web Developer Nanodegree](https://www.udacity.com/course/full-stack-web-developer-nanodegree--nd004).  I created this app to practice CRUD (create, read, update, delete) database operations and to practice incorporating 3rd-party frameworks and modules into my codebase.  It is currently run on localhost, but it could be deployed to the web in the future.
 
+**EDIT** Lizard catalog is NOW LIVE at [lizardapp.herokuapp.com](http://www.lizardapp.herokuapp.com)
 ## What exactly is a Lizard Catalog App?
 I believe coding something I care about is far better than coding without drive or purpose.  Project 3 calls for students to create a basic catalog app with two data points connected in a parent/child relationship (like in this [sample website](https://docs.google.com/document/d/1jFjlq_f-hJoAZP8dYuo5H3xY62kGyziQmiv9EPIA7tM/pub?embedded=true)).
 
