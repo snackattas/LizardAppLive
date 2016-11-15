@@ -11,7 +11,7 @@ app.debug = True
 # app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 # app.config['SQLALCHEMY_DATABASE_URI'] =\
 #     'postgresql://lizardappuser:password@localhost/lizardapp'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['HEROKU_POSTGRESQL_RED_URL']
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config[' SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 # Initialize third party modules
 db = SQLAlchemy(app)
