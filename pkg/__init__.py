@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = os.environ['SECRET_KEY']
 
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///LizardCatalog.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['CLEARDB_DATABASE_URL']
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config[' SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 # Initialize third party modules
 db = SQLAlchemy(app)
