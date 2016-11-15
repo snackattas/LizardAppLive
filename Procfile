@@ -1,1 +1,1 @@
-web: gunicorn pkg:run
+web: gunicorn pkg:app
