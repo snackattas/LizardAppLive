@@ -111,134 +111,134 @@ def hobbyATOM():
     return feed.get_response()
 
 
-@app.route('/all.atom/')
-def allATOM():
-    # Query to perform union on all lizards and hobbies
-    # Then sort results by creation instant
-    results = db.engine.execute("""
-        SELECT * FROM
-            (SELECT
-                id,
-                name,
-                user_id,
-                NULL as description,
-                creation_instant,
-                picture_url,
-                NULL as lizard_id,
-                "lizard" AS type
-            FROM Lizard
-            UNION
-            SELECT
-                id,
-                name,
-                user_id,
-                description,
-                creation_instant,
-                picture_url,
-                lizard_id,
-                "hobby" AS type
-            FROM Hobby)
-        ORDER BY creation_instant DESC""").fetchall()
-
-    updated = None
-    if results:
-        # Executing the query with raw SQL returns unicode, not python date
-        # Need to convert it back to a python date
-        updated = datetime.datetime.strptime(
-            results[0].creation_instant, '%Y-%m-%d %H:%M:%S.%f')
-
-    feed = AtomFeed(
-        'All Lizards and Hobbies',
-        feed_url=request.url,
-        url=request.url_root,
-        author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
-        id="%s/publicLizard/" % (base),
-        updated=updated)
-
-    for result in results:
-        user = User.query.filter_by(id=result.user_id).one()
-        updated = datetime.datetime.strptime(
-            result.creation_instant, '%Y-%m-%d %H:%M:%S.%f')
-
-        if result.type == 'lizard':
-            name = "Lizard %s" % (result.name)
-            url = "%s/publicLizard/#%s" % (base, result.id)
-            content = "Picture URL: <a href='%s'>%s</a>" % \
-                (result.picture_url, result.picture_url)
-
-        if result.type == 'hobby':
-            lizard = Lizard.query.filter_by(id=result.lizard_id).one()
-            name = "Hobby %s" % (result.name)
-            url = "%s/publicLizard/%s/publicHobby/#%s" % \
-                (base, lizard.id, result.id)
-            content = """
-                Description: %s
-                </br>
-                Lizard:
-                <a href='%s/publicLizard/#%s'>%s</a>
-                </br>
-                Picture URL: <a href='%s'>%s</a>""" % \
-                (result.description, base, result.id, lizard.name,
-                    result.picture_url, result.picture_url)
-
-        feed.add(
-            name,
-            content,
-            content_type='html',
-            author={'name': user.name},
-            url=url,
-            id=url,
-            updated=updated,
-            published=updated)
-    return feed.get_response()
-
-
-@app.route('/changes.atom/')
-def changesATOM():
-    changes = ChangeLog.query.order_by(db.desc('update_instant')).all()
-
-    updated = None
-    if changes:
-        updated = changes[0].update_instant
-
-    feed = AtomFeed(
-        'Changes to Lizard Database',
-        feed_url=request.url,
-        url=request.url_root,
-        author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
-        id="%s/publicLizard/" % (base),
-        updated=updated)
-
-    for change in changes:
-        user = User.query.filter_by(id=change.user_id).one()
-        content = "Action: %s" % (change.action)
-
-        if change.table == 'lizard':
-            name = "Lizard %s" % (change.lizard_name)
-            if change.action == 'delete':
-                url = None
-                unique_url = "%s/publicLizard/" % (base)
-            if change.action == 'new' or change.action == 'update':
-                url = "%s/publicLizard/#%s" % (base, change.lizard_id)
-                unique_url = url
-
-        if change.table == 'hobby':
-            name = "Hobby %s" % (change.hobby_name)
-            if change.action == 'delete':
-                url = None
-                unique_url = "%s/publicLizard/" % (base)
-            if change.action == 'new' or change.action == 'update':
-                url = "%s/publicLizard/%s/publicHobby/#%s" \
-                    % (base, change.lizard_id, change.hobby_id)
-                unique_url = url
-
-        feed.add(
-            name,
-            content,
-            content_type='html',
-            author={'name': user.name},
-            url=url,
-            id=unique_url,
-            updated=change.update_instant,
-            published=change.update_instant)
-    return feed.get_response()
+# @app.route('/all.atom/')
+# def allATOM():
+#     # Query to perform union on all lizards and hobbies
+#     # Then sort results by creation instant
+#     results = db.engine.execute("""
+#         SELECT * FROM
+#             (SELECT
+#                 id,
+#                 name,
+#                 user_id,
+#                 NULL as description,
+#                 creation_instant,
+#                 picture_url,
+#                 NULL as lizard_id,
+#                 "lizard" AS type
+#             FROM Lizard
+#             UNION
+#             SELECT
+#                 id,
+#                 name,
+#                 user_id,
+#                 description,
+#                 creation_instant,
+#                 picture_url,
+#                 lizard_id,
+#                 "hobby" AS type
+#             FROM Hobby)
+#         ORDER BY creation_instant DESC""").fetchall()
+#
+#     updated = None
+#     if results:
+#         # Executing the query with raw SQL returns unicode, not python date
+#         # Need to convert it back to a python date
+#         updated = datetime.datetime.strptime(
+#             results[0].creation_instant, '%Y-%m-%d %H:%M:%S.%f')
+#
+#     feed = AtomFeed(
+#         'All Lizards and Hobbies',
+#         feed_url=request.url,
+#         url=request.url_root,
+#         author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
+#         id="%s/publicLizard/" % (base),
+#         updated=updated)
+#
+#     for result in results:
+#         user = User.query.filter_by(id=result.user_id).one()
+#         updated = datetime.datetime.strptime(
+#             result.creation_instant, '%Y-%m-%d %H:%M:%S.%f')
+#
+#         if result.type == 'lizard':
+#             name = "Lizard %s" % (result.name)
+#             url = "%s/publicLizard/#%s" % (base, result.id)
+#             content = "Picture URL: <a href='%s'>%s</a>" % \
+#                 (result.picture_url, result.picture_url)
+#
+#         if result.type == 'hobby':
+#             lizard = Lizard.query.filter_by(id=result.lizard_id).one()
+#             name = "Hobby %s" % (result.name)
+#             url = "%s/publicLizard/%s/publicHobby/#%s" % \
+#                 (base, lizard.id, result.id)
+#             content = """
+#                 Description: %s
+#                 </br>
+#                 Lizard:
+#                 <a href='%s/publicLizard/#%s'>%s</a>
+#                 </br>
+#                 Picture URL: <a href='%s'>%s</a>""" % \
+#                 (result.description, base, result.id, lizard.name,
+#                     result.picture_url, result.picture_url)
+#
+#         feed.add(
+#             name,
+#             content,
+#             content_type='html',
+#             author={'name': user.name},
+#             url=url,
+#             id=url,
+#             updated=updated,
+#             published=updated)
+#     return feed.get_response()
+#
+#
+# @app.route('/changes.atom/')
+# def changesATOM():
+#     changes = ChangeLog.query.order_by(db.desc('update_instant')).all()
+#
+#     updated = None
+#     if changes:
+#         updated = changes[0].update_instant
+#
+#     feed = AtomFeed(
+#         'Changes to Lizard Database',
+#         feed_url=request.url,
+#         url=request.url_root,
+#         author={'name': 'Zach Attas', 'email': 'zach.attas@gmail.com'},
+#         id="%s/publicLizard/" % (base),
+#         updated=updated)
+#
+#     for change in changes:
+#         user = User.query.filter_by(id=change.user_id).one()
+#         content = "Action: %s" % (change.action)
+#
+#         if change.table == 'lizard':
+#             name = "Lizard %s" % (change.lizard_name)
+#             if change.action == 'delete':
+#                 url = None
+#                 unique_url = "%s/publicLizard/" % (base)
+#             if change.action == 'new' or change.action == 'update':
+#                 url = "%s/publicLizard/#%s" % (base, change.lizard_id)
+#                 unique_url = url
+#
+#         if change.table == 'hobby':
+#             name = "Hobby %s" % (change.hobby_name)
+#             if change.action == 'delete':
+#                 url = None
+#                 unique_url = "%s/publicLizard/" % (base)
+#             if change.action == 'new' or change.action == 'update':
+#                 url = "%s/publicLizard/%s/publicHobby/#%s" \
+#                     % (base, change.lizard_id, change.hobby_id)
+#                 unique_url = url
+#
+#         feed.add(
+#             name,
+#             content,
+#             content_type='html',
+#             author={'name': user.name},
+#             url=url,
+#             id=unique_url,
+#             updated=change.update_instant,
+#             published=change.update_instant)
+#     return feed.get_response()

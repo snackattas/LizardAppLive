@@ -53,10 +53,6 @@ All dependencies are part of the vagrant package and require no updates by the p
     Displays all lizards
 ### [localhost:8000/hobby.atom/](localhost:8000/hobby.atom/)
     Displays all hobbies
-### [localhost:8000/all.atom/](localhost:8000/all.atom/)
-    Displays all lizards and hobbies
-###[localhost:8000/changes.atom/](localhost:8000/changes.atom/)
-    Displays all content of the recent activity feed
 
 ## Screenshots
 ![Lizard Homepage](/../master/pkg/static/Lizard%20Homepage.JPG?raw=true "Lizard Homepage")
