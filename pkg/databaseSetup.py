@@ -1,5 +1,4 @@
 from pkg import app, db
-from sqlalchemy_imageattach.entity import Image, image_attachment
 import datetime
 
 
@@ -22,13 +21,10 @@ class Lizard(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    picture = image_attachment('LizardImage')
     picture_url = db.Column(db.String(500))
     creation_instant = db.Column(db.DateTime(timezone=True),
                                  default=datetime.datetime.utcnow)
     hobby_relationship = db.relationship("Hobby", cascade="delete")
-    picture_relationship = db.relationship("LizardImage", uselist=False,
-                                           back_populates="lizard")
 
     @property
     def serialize(self):
@@ -49,12 +45,9 @@ class Hobby(db.Model):
     description = db.Column(db.String(250))
     lizard_id = db.Column(db.Integer, db.ForeignKey('lizard.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    picture = image_attachment('HobbyImage')
     picture_url = db.Column(db.String(500))
     creation_instant = db.Column(db.DateTime(timezone=True),
                                  default=datetime.datetime.utcnow)
-    picture_relationship = db.relationship("HobbyImage", uselist=False,
-                                            back_populates="hobby")
 
     @property
     def serialize(self):
@@ -68,19 +61,10 @@ class Hobby(db.Model):
         }
 
 
-# Lizard table that contains references to image files
-class LizardImage(db.Model, Image):
-    __tablename__ = 'lizardimage'
-    lizard_id = db.Column(db.Integer, db.ForeignKey('lizard.id'),
-                            primary_key=True)
-    lizard = db.relationship(Lizard, back_populates="picture_relationship")
 
 
-# Hobby table that contains references to image files
-class HobbyImage(db.Model, Image):
-    __tablename__ = 'hobbyimage'
-    hobby_id = db.Column(db.Integer, db.ForeignKey('hobby.id'), primary_key=True)
-    hobby = db.relationship("Hobby", back_populates="picture_relationship")
+
+
 
 
 # ChangeLog table that contains instants when a lizard or hobby is added,

@@ -1,12 +1,9 @@
 from pkg import app, db, session
 from databaseSetup import User, Lizard, Hobby
-from databaseSetup import LizardImage, HobbyImage, ChangeLog
+from databaseSetup import ChangeLog
 
 from flask import render_template, request, redirect, url_for, flash
 from flask import session as login_session
-
-from sqlalchemy_imageattach.context import store_context
-from sqlalchemy_imageattach.stores.fs import HttpExposedFileSystemStore
 
 import httplib
 import urlparse
@@ -17,12 +14,6 @@ from functools import wraps
 import datetime
 import os
 import arrow
-
-store = HttpExposedFileSystemStore(
-    path=os.path.join(os.path.dirname(__file__), "images"))
-
-app.wsgi_app = store.wsgi_middleware(app.wsgi_app)
-
 
 # Helper Functions
 def requires_login(function):
@@ -85,19 +76,13 @@ def isURLImage(url):
             return render_template("error.html", error=error)
         """
 
-    acceptable_image_types = ["image/png", "image/jpeg", "image/jpg",
-                              "image/svg+xml"]
     scheme, host, path, params, query, fragment = urlparse.urlparse(url)
-    if scheme != "http":
-        error = "Only supports HTTP requests: %s" % (url)
-        return ("", error)
     if not path:
         path = "/"
     if params:
         path = path + ";" + params
     if query:
         path = path + "?" + query
-
     try:
     # make a http HEAD request
         h = httplib.HTTP(host)
@@ -108,6 +93,8 @@ def isURLImage(url):
         status, reason, headers = h.getreply()
         # Convert byte size to megabytes
         image_type = headers.get("content-type")
+        acceptable_image_types = ["image/png", "image/jpeg", "image/jpg",
+            "image/svg+xml"]
         if image_type not in acceptable_image_types:
             error = "Only image URLs accepted: %s" % (url)
             h.close()
@@ -126,53 +113,51 @@ def isURLImage(url):
     except:
         error = "Invalid url: %s" % (url)
         return ("", error)
-    return (url, "")
+    
+    # Now determine whether https or http is safe protocol
+    https_url = ""
+    http_url = ""
+    if url.find("https://") > -1:
+        https_url = url
+        http_url = url.replace("https://", "http://")
+    if url.find("http://") > -1:
+        https_url = url.replace("http://", "https://")
+        http_url = url
+    if not https_url and not http_url:
+        https_url = "https://" + url
+        http_url = "http://" + url
 
-# Function to make date difference human readable, for the Recent Activity
-# Copied from here:
-# http://stackoverflow.com/questions/1551382/user-friendly-time-format-in-python
-def pretty_date(time=False):
-    """pretty_date: Makes a date difference human-readable
+    # Check https first:
+    if certificate(http_url):
+        return (url, "")
+    if cerificate(https_url):
+        return (url, "")
+    return (url, "This site is blocked over HTTP and HTTPS")
+    
+    # result = certificate(https_url)
+    # if certificate(https_url):
+    #     return (url, "")
+    # else:
+    #     result, error = certificate(http_url)
+    #     if result:
+    #         return (url, "")
+    # return (url, error)
 
-    Args:
-        time [default=False]: A python date object
-    Returns: The time difference between the time passed in and now, in
-             human-readable form"""
-    # now = datetime.datetime.now()
-    # if type(time) is int:
-    #     diff = now - datetime.fromtimestamp(time)
-    # elif isinstance(time,datetime.datetime):
-    #     diff = now - time
-    # elif not time:
-    #     diff = now - now
-    # second_diff = diff.seconds
-    # day_diff = diff.days
-    #
-    # if day_diff < 0:
-    #     return ""
-    #
-    # if day_diff == 0:
-    #     if second_diff < 10:
-    #         return "just now"
-    #     if second_diff < 60:
-    #         return str(second_diff) + " seconds ago"
-    #     if second_diff < 120:
-    #         return "a minute ago"
-    #     if second_diff < 3600:
-    #         return str(second_diff / 60) + " minutes ago"
-    #     if second_diff < 7200:
-    #         return "an hour ago"
-    #     if second_diff < 86400:
-    #         return str(second_diff / 3600) + " hours ago"
-    # if day_diff == 1:
-    #     return "yesterday"
-    # if day_diff < 7:
-    #     return str(day_diff) + " days ago"
-    # if day_diff < 31:
-    #     return str(day_diff / 7) + " weeks ago"
-    # if day_diff < 365:
-    #     return str(day_diff / 30) + " months ago"
-    # return str(day_diff / 365) + " years ago"
+def certificate(url):
+	TIMEOUT=1
+	result = False
+	try:
+		# Open URL
+		url_open = urlopen(url, timeout=TIMEOUT)
+		url_open.close()
+		result = True
+		return result
+	except:
+	    return result
+	return result
+
+
+def pretty_date(time):
     return arrow.get(time).humanize()
 
 def recentActivity():
@@ -192,11 +177,10 @@ def showPublicLizard():
         "/publicLizard/"""""
     lizards = Lizard.query.order_by(db.asc(Lizard.name)).all()
     total_lizards = len(lizards)
-    with store_context(store):
-        return render_template("publicLizard.html", lizards=lizards,
-                               recent_activity=recentActivity(),
-                               pretty_date=pretty_date,
-                               total_lizards=total_lizards)
+    return render_template("publicLizard.html", lizards=lizards,
+                           recent_activity=recentActivity(),
+                           pretty_date=pretty_date,
+                           total_lizards=total_lizards)
 
 
 @app.route("/publicLizard/<int:lizard_id>/")
@@ -212,10 +196,9 @@ def showPublicHobby(lizard_id):
     creator = User.query.filter_by(id=lizard.user_id).one()
     hobbies = Hobby.query.\
         filter_by(lizard_id=lizard.id).all()
-    with store_context(store):
-        return render_template(
-            "publicHobby.html", hobbies=hobbies, lizard=lizard,
-            creator=creator, login_session=login_session)
+    return render_template(
+        "publicHobby.html", hobbies=hobbies, lizard=lizard,
+        creator=creator, login_session=login_session)
 
 
 # Routes to edit the database, all require login
@@ -225,12 +208,11 @@ def showLizard():
     "showLizard: Displays all lizards; requires login"
     lizards = Lizard.query.order_by(db.asc(Lizard.name)).all()
     total_lizards = len(lizards)
-    with store_context(store):
-        return render_template("lizard.html", lizards=lizards,
-                               login_session=login_session,
-                               recent_activity=recentActivity(),
-                               pretty_date=pretty_date,
-                               total_lizards=total_lizards)
+    return render_template("lizard.html", lizards=lizards,
+                           login_session=login_session,
+                           recent_activity=recentActivity(),
+                           pretty_date=pretty_date,
+                           total_lizards=total_lizards)
 
 
 @app.route("/lizard/new/", methods=["GET", "POST"])
@@ -245,31 +227,25 @@ def newLizard():
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        with store_context(store):
-            return render_template("newLizard.html",
-                                   login_session=login_session,
-                                   error=error)
+        return render_template("newLizard.html",
+                               login_session=login_session,
+                               error=error)
     # urlopen uses a GET request and does not accept HTTPS urls
-    try:
-        url_open = urlopen(url)
-    except:
-        with store_context(store):
-            error = "Unable to make a request to this URL: %s" % (url)
-            return render_template("newLizard.html",
-                                   login_session=login_session,
-                                   error=error)
+    # try:
+    #     url_open = urlopen(url)
+    # except:
+    #     error = "Unable to make a request to this URL: %s" % (url)
+    #     return render_template("newLizard.html",
+    #                           login_session=login_session,
+    #                           error=error)
     # Create Lizard object
     new_lizard = Lizard(
         name=request.form.get("name"),
         user_id=login_session.get("user_id"),
         picture_url=url)
 
-    # Must add picture to lizard object within store_context
-    with store_context(store):
-        new_lizard.picture.from_file(url_open)  # adding picture here
-        session.add(new_lizard)
-        session.commit()
-        url_open.close()  # make sure to close url connection after commit
+    session.add(new_lizard)
+    session.commit()
 
     # After commit, retrieve lizard info to add to the ChangeLog
     newest_lizard = Lizard.query.\
@@ -299,28 +275,25 @@ def editLizard(lizard_id):
     Arguments are derived from the url"""
     edited_lizard = Lizard.query.filter_by(id=lizard_id).one()
     if request.method == "GET":
-        with store_context(store):
-            return render_template("editLizard.html",
-                                   lizard=edited_lizard,
-                                   login_session=login_session)
+        return render_template("editLizard.html",
+                               lizard=edited_lizard,
+                               login_session=login_session)
 
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        with store_context(store):
-            return render_template("editLizard.html",
-                                   login_session=login_session,
-                                   lizard=edited_lizard,
-                                   error=error)
-    try:
-        url_open = urlopen(url)
-    except:
-        with store_context(store):
-            error = "Unable to make a request to this URL: %s" % (url)
-            return render_template("editLizard.html",
-                                   login_session=login_session,
-                                   lizard=edited_lizard,
-                                   error=error)
+        return render_template("editLizard.html",
+                               login_session=login_session,
+                               lizard=edited_lizard,
+                               error=error)
+    # try:
+    #     url_open = urlopen(url)
+    # except:
+    #     error = "Unable to make a request to this URL: %s" % (url)
+    #     return render_template("editLizard.html",
+    #                           login_session=login_session,
+    #                           lizard=edited_lizard,
+    #                           error=error)
 
     change_log = ChangeLog(
         user_id=edited_lizard.user_id,
@@ -332,14 +305,11 @@ def editLizard(lizard_id):
 
     edited_lizard.name = request.form.get("name")
     edited_lizard.picture_url = url
-    # Add all info to session while in store_context
-    with store_context(store):
-        edited_lizard.picture.from_file(url_open)
-        session.add(change_log)
-        session.add(edited_lizard)
-        flash("Lizard %s Successfully Edited"  % edited_lizard.name)
-        session.commit()
-        url_open.close()
+
+    session.add(change_log)
+    session.add(edited_lizard)
+    flash("Lizard %s Successfully Edited"  % edited_lizard.name)
+    session.commit()
     return redirect(url_for("showLizard"))
 
 
@@ -352,10 +322,9 @@ def deleteLizard(lizard_id):
     Arguments are derived from the url"""
     lizard_to_delete = Lizard.query.filter_by(id=lizard_id).one()
     if request.method == "GET":
-        with store_context(store):
-            return render_template(
-                "deleteLizard.html", lizard=lizard_to_delete,
-                login_session=login_session)
+        return render_template(
+            "deleteLizard.html", lizard=lizard_to_delete,
+            login_session=login_session)
 
     change_log = ChangeLog(
         user_id=lizard_to_delete.user_id,
@@ -372,8 +341,7 @@ def deleteLizard(lizard_id):
     #     session.delete(hobby)
     session.delete(lizard_to_delete)
     flash("Lizard %s Successfully Deleted" % lizard_to_delete.name)
-    with store_context(store):
-        session.commit()
+    session.commit()
     return redirect(url_for("showLizard"))
 
 
@@ -390,11 +358,10 @@ def showHobby(lizard_id):
     lizard = Lizard.query.filter_by(id=lizard_id).one()
     hobbies = Hobby.query.filter_by(lizard_id=lizard_id).all()
     creator = User.query.filter_by(id=lizard.user_id).one()
-    with store_context(store):
-        return render_template(
-            "hobby.html", hobbies=hobbies, lizard=lizard,
-            login_session=login_session, creator=creator,
-            user_id=login_session["user_id"])
+    return render_template(
+        "hobby.html", hobbies=hobbies, lizard=lizard,
+        login_session=login_session, creator=creator,
+        user_id=login_session["user_id"])
 
 
 @app.route("/lizard/<int:lizard_id>/new/", methods=["GET", "POST"])
@@ -407,28 +374,25 @@ def newHobby(lizard_id):
     Arguments are derived from the url"""
     lizard = Lizard.query.filter_by(id=lizard_id).one()
     if request.method == "GET":
-        with store_context(store):
-            return render_template("newHobby.html",
-                                   lizard=lizard,
-                                   login_session=login_session)
+        return render_template("newHobby.html",
+                               lizard=lizard,
+                               login_session=login_session)
 
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        with store_context(store):
-            return render_template("newHobby.html",
-                                   login_session=login_session,
-                                   lizard=lizard,
-                                   error=error)
-    try:
-        url_open = urlopen(url)
-    except:
-        with store_context(store):
-            error = "Unable to make a request to this URL: %s" % (url)
-            return render_template("newHobby.html",
-                                   login_session=login_session,
-                                   lizard=lizard,
-                                   error=error)
+        return render_template("newHobby.html",
+                               login_session=login_session,
+                               lizard=lizard,
+                               error=error)
+    # try:
+    #     url_open = urlopen(url)
+    # except:
+    #     error = "Unable to make a request to this URL: %s" % (url)
+    #     return render_template("newHobby.html",
+    #                           login_session=login_session,
+    #                           lizard=lizard,
+    #                           error=error)
 
     new_hobby = Hobby(
         name=request.form.get("name"),
@@ -437,12 +401,9 @@ def newHobby(lizard_id):
         user_id=lizard.user_id,
         picture_url=url)
 
-    with store_context(store):
-        new_hobby.picture.from_file(url_open)
-        session.add(new_hobby)
-        flash("New Hobby %s Successfully Created" % (new_hobby.name))
-        session.commit()
-        url_open.close()
+    session.add(new_hobby)
+    flash("New Hobby %s Successfully Created" % (new_hobby.name))
+    session.commit()
 
     newest_hobby = Hobby.query.\
         filter_by(user_id=lizard.user_id).\
@@ -478,36 +439,33 @@ def editHobby(lizard_id, hobby_id):
     edited_hobby = Hobby.query.\
         filter_by(id=hobby_id, lizard_id=lizard_id).one()
     if request.method == "GET":
-        with store_context(store):
-            return render_template("editHobby.html",
-                                   lizard=lizard,
-                                   hobby_id=hobby_id,
-                                   hobby=edited_hobby,
-                                   login_session=login_session)
+        return render_template("editHobby.html",
+                               lizard=lizard,
+                               hobby_id=hobby_id,
+                               hobby=edited_hobby,
+                               login_session=login_session)
 
     url = request.form.get("url")
     (url, error) = isURLImage(url)
     if error:
-        with store_context(store):
-            return render_template("editHobby.html",
-                                   login_session=login_session,
-                                   lizard=lizard,
-                                   lizard_id=lizard_id,
-                                   hobby_id=hobby_id,
-                                   hobby=edited_hobby,
-                                   error=error)
-    try:
-        url_open = urlopen(url)
-    except:
-        with store_context(store):
-            error = "Unable to make a request to this URL: %s" % (url)
-            return render_template("editHobby.html",
-                                   login_session=login_session,
-                                   lizard=lizard,
-                                   lizard_id=lizard_id,
-                                   hobby_id=hobby_id,
-                                   hobby=edited_hobby,
-                                   error=error)
+        return render_template("editHobby.html",
+                               login_session=login_session,
+                               lizard=lizard,
+                               lizard_id=lizard_id,
+                               hobby_id=hobby_id,
+                               hobby=edited_hobby,
+                               error=error)
+    # try:
+    #     url_open = urlopen(url)
+    # except:
+    #     error = "Unable to make a request to this URL: %s" % (url)
+    #     return render_template("editHobby.html",
+    #                           login_session=login_session,
+    #                           lizard=lizard,
+    #                           lizard_id=lizard_id,
+    #                           hobby_id=hobby_id,
+    #                           hobby=edited_hobby,
+    #                           error=error)
 
     # The ChangeLog for editing hobbies will have an entry if any change is
     # made to an hobby
@@ -527,12 +485,9 @@ def editHobby(lizard_id, hobby_id):
     edited_hobby.description = request.form.get("description")
     edited_hobby.picture_url = url
 
-    with store_context(store):
-        edited_hobby.picture.from_file(url_open)
-        session.add(change_log)
-        flash("Hobby %s Successfully Edited" % (edited_hobby.name))
-        session.commit()
-        url_open.close()
+    session.add(change_log)
+    flash("Hobby %s Successfully Edited" % (edited_hobby.name))
+    session.commit()
     return redirect(url_for("showHobby", lizard_id=lizard_id))
 
 
@@ -550,9 +505,8 @@ def deleteHobby(lizard_id, hobby_id):
     hobby_to_delete = Hobby.query.\
         filter_by(id=hobby_id, lizard_id=lizard_id).one()
     if request.method == "GET":
-        with store_context(store):
-            return render_template("deleteHobby.html", lizard=lizard,
-            hobby=hobby_to_delete, login_session=login_session)
+        return render_template("deleteHobby.html", lizard=lizard,
+        hobby=hobby_to_delete, login_session=login_session)
 
     change_log = ChangeLog(
         user_id=hobby_to_delete.user_id,
@@ -566,8 +520,7 @@ def deleteHobby(lizard_id, hobby_id):
     session.add(change_log)
     session.delete(hobby_to_delete)
     flash("Hobby %s Successfully Deleted" % (hobby_to_delete.name))
-    with store_context(store):
-        session.commit()
+    session.commit()
     return redirect(url_for("showHobby", lizard_id=lizard_id))
 
 

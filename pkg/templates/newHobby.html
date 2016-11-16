@@ -6,7 +6,7 @@
 </div>
 <div class="row banner menu">
 	<div class="col-md-3 padding-none">
-		<img class="image header" src="{{lizard.picture.locate()}}">
+		<img class="image header" src="{{lizard.picture_url}}">
 	</div>
 	<div class="col-md-9 header-text">
 		<h1>New Hobby for {{ lizard.name }}</h1>
@@ -36,8 +36,7 @@
 		<div class="error">{{error}}</div>
 	</div>
 </div>
-<!-- <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
-</script> -->
+
 <script>
 $(document).ready(function() {
   $("form").submit(function(e) {
