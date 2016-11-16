@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.WARNING)
 
 app = Flask(__name__)
 app.secret_key = os.environ['SECRET_KEY']
-app.debug = True
+# app.debug = True
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 # app.config['SQLALCHEMY_DATABASE_URI'] =\
 #     'postgresql://lizardappuser:password@localhost/lizardapp'
